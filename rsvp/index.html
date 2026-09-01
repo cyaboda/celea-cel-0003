@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>RSVP · CELEA</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui;background:#f7f3ef;color:#393532}.wrap{max-width:980px;margin:auto;padding:28px}
+header{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:24px}.brand{letter-spacing:.2em;font-size:12px}.title{font-family:Georgia,serif;font-size:42px;font-weight:400;margin:5px 0}
+.card{background:white;border:1px solid #e6ddd6;border-radius:22px;padding:22px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.n{font-size:34px;font-family:Georgia,serif}.muted{color:#7b736d}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #eee7e2;font-size:14px}th{font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.login{max-width:430px;margin:13vh auto}input,button{width:100%;padding:13px;border-radius:13px;border:1px solid #ddd2ca;font:inherit}button{margin-top:10px;background:#393532;color:#fff;border:0;font-weight:700;cursor:pointer}.hidden{display:none!important}
+@media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.wrap{padding:18px}table{font-size:12px;display:block;overflow:auto}.title{font-size:34px}}
+</style></head>
+<body>
+<div class="wrap">
+<section class="card login" id="login">
+  <div class="brand">CELEA STUDIO</div><h1 class="title">Panel RSVP</h1>
+  <p class="muted">Ingresa la clave privada de este evento.</p>
+  <input id="pin" type="password" inputmode="numeric" placeholder="Clave">
+  <button id="loginBtn">Entrar</button><p class="muted" id="error"></p>
+</section>
+<section id="panel" class="hidden">
+<header><div><div class="brand">CELEA STUDIO · RSVP</div><h1 class="title" id="eventName">Evento</h1><div class="muted" id="updated"></div></div></header>
+<div class="stats">
+  <div class="card"><div class="n" id="stInv">0</div><div class="muted">Invitaciones</div></div>
+  <div class="card"><div class="n" id="stCup">0</div><div class="muted">Cupos</div></div>
+  <div class="card"><div class="n" id="stYes">0</div><div class="muted">Asistirán</div></div>
+  <div class="card"><div class="n" id="stPend">0</div><div class="muted">Sin responder</div></div>
+</div>
+<div class="card"><table><thead><tr><th>Invitado</th><th>Cupos</th><th>Estado</th><th>Asisten</th><th>Acompañantes</th><th>Respuesta</th></tr></thead><tbody id="rows"></tbody></table></div>
+</section>
+</div>
+<script>
+const API_URL="https://script.google.com/macros/s/AKfycbzu42ewgHPaFYryJMtRK_L2_iphOU6r0Mml7A3UCe7_elkqy7oWnmv6B5caJDuD9lA6/exec";const PROJECT_ID="CEL-0003";
+function jsonp(params){return new Promise((resolve,reject)=>{const cb="c_"+Date.now()+"_"+Math.random().toString(36).slice(2),s=document.createElement("script");window[cb]=d=>{delete window[cb];s.remove();resolve(d)};params.callback=cb;s.src=API_URL+"?"+new URLSearchParams(params);s.onerror=()=>reject(new Error("Sin conexión"));document.body.appendChild(s)})}
+async function enter(){
+ const pin=document.getElementById("pin").value.trim();if(!pin)return;
+ document.getElementById("loginBtn").disabled=true;document.getElementById("error").textContent="";
+ try{
+  const d=await jsonp({accion:"rsvp_dashboard",id:PROJECT_ID,pin});
+  if(!d.ok)throw new Error(d.mensaje||"Clave incorrecta");
+  sessionStorage.setItem("celea_rsvp_pin",pin);render(d);
+ }catch(e){document.getElementById("error").textContent=e.message;document.getElementById("loginBtn").disabled=false}
+}
+function render(d){
+ document.getElementById("login").classList.add("hidden");document.getElementById("panel").classList.remove("hidden");
+ document.getElementById("eventName").textContent=d.nombres||PROJECT_ID;
+ document.getElementById("updated").textContent="Actualizado: "+new Date().toLocaleString("es-EC");
+ document.getElementById("stInv").textContent=d.resumen.invitaciones;
+ document.getElementById("stCup").textContent=d.resumen.cupos;
+ document.getElementById("stYes").textContent=d.resumen.asisten;
+ document.getElementById("stPend").textContent=d.resumen.pendientes;
+ document.getElementById("rows").innerHTML=d.invitados.map(x=>`<tr><td>${esc(x.invitado)}</td><td>${x.cupos}</td><td>${esc(x.estado)}</td><td>${x.asisten||""}</td><td>${esc(x.acompanantes||"")}</td><td>${esc(x.fechaRespuesta||"")}</td></tr>`).join("");
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+document.getElementById("loginBtn").onclick=enter;document.getElementById("pin").addEventListener("keydown",e=>{if(e.key==="Enter")enter()});
+const saved=sessionStorage.getItem("celea_rsvp_pin");if(saved){document.getElementById("pin").value=saved;enter()}
+</script></body></html>
